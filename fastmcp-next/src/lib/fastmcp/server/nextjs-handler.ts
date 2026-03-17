@@ -163,10 +163,10 @@ export function createMCPHandler(
    * Handle POST requests - JSON-RPC operations.
    */
   async function POST(request: NextRequest): Promise<NextResponse> {
-    let rpcRequest: JsonRpcRequest;
+    let body: unknown;
 
     try {
-      rpcRequest = (await request.json()) as JsonRpcRequest;
+      body = await request.json();
     } catch {
       return NextResponse.json(
         createRpcError(null, -32700, "Parse error"),
@@ -174,10 +174,28 @@ export function createMCPHandler(
       );
     }
 
-    if (rpcRequest.jsonrpc !== "2.0" || !rpcRequest.method) {
+    // Validate JSON-RPC structure
+    if (
+      typeof body !== "object" ||
+      body === null ||
+      Array.isArray(body)
+    ) {
+      return NextResponse.json(
+        createRpcError(null, -32600, "Invalid Request"),
+        { status: 400, headers: corsHeaders() }
+      );
+    }
+
+    const rpcRequest = body as Record<string, unknown>;
+    const jsonrpc = rpcRequest.jsonrpc;
+    const method = rpcRequest.method;
+    const id = rpcRequest.id as string | number | undefined;
+    const params = (rpcRequest.params ?? {}) as Record<string, unknown>;
+
+    if (jsonrpc !== "2.0" || typeof method !== "string" || !method) {
       return NextResponse.json(
         createRpcError(
-          rpcRequest.id ?? null,
+          id ?? null,
           -32600,
           "Invalid Request"
         ),
@@ -188,13 +206,13 @@ export function createMCPHandler(
     try {
       const result = await handleMethod(
         mcp,
-        rpcRequest.method,
-        rpcRequest.params ?? {}
+        method,
+        params
       );
 
       const response: JsonRpcResponse = {
         jsonrpc: "2.0",
-        id: rpcRequest.id,
+        id,
         result,
       };
 
@@ -204,7 +222,7 @@ export function createMCPHandler(
     } catch (error) {
       const [code, message] = getErrorInfo(error);
       return NextResponse.json(
-        createRpcError(rpcRequest.id ?? null, code, message),
+        createRpcError(id ?? null, code, message),
         { status: getHttpStatus(code), headers: corsHeaders() }
       );
     }

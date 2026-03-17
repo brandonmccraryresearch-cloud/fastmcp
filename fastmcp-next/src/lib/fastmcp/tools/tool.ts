@@ -181,33 +181,14 @@ function zodToJsonSchema(schema: ZodType): ToolInputSchema {
 }
 
 function zodFieldToJsonSchema(field: ZodType): JsonSchema {
-  if (field instanceof z.ZodString) return { type: "string" };
-  if (field instanceof z.ZodNumber) return { type: "number" };
-  if (field instanceof z.ZodBoolean) return { type: "boolean" };
-  if (field instanceof z.ZodArray) {
-    const def = (field as unknown as { _zod: { def: { element: ZodType } } })._zod?.def;
-    if (def?.element) {
-      return {
-        type: "array",
-        items: zodFieldToJsonSchema(def.element),
-      };
-    }
-    return { type: "array" };
+  // Use Zod's public toJSONSchema for individual fields too
+  try {
+    const schema = toJSONSchema(field) as Record<string, unknown>;
+    return schema as JsonSchema;
+  } catch {
+    // Fallback to basic type mapping
+    return {};
   }
-  if (field instanceof z.ZodOptional) {
-    const def = (field as unknown as { _zod: { def: { innerType: ZodType } } })._zod?.def;
-    if (def?.innerType) {
-      return zodFieldToJsonSchema(def.innerType);
-    }
-  }
-  if (field instanceof z.ZodDefault) {
-    const def = (field as unknown as { _zod: { def: { innerType: ZodType; defaultValue: unknown } } })._zod?.def;
-    if (def?.innerType) {
-      const inner = zodFieldToJsonSchema(def.innerType);
-      return { ...inner, default: def.defaultValue };
-    }
-  }
-  return {};
 }
 
 function isOptional(field: ZodType): boolean {
