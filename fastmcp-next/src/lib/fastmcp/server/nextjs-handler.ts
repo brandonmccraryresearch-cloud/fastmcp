@@ -331,14 +331,17 @@ function createRpcError(
   message: string,
   data?: unknown
 ): JsonRpcResponse {
+  const error: { code: number; message: string; data?: unknown } = {
+    code,
+    message,
+  };
+  if (data !== undefined) {
+    error.data = data;
+  }
   return {
     jsonrpc: "2.0",
     id: id ?? undefined,
-    error: {
-      code,
-      message,
-      ...(data && { data }),
-    },
+    error,
   };
 }
 

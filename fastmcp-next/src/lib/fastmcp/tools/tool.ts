@@ -8,7 +8,7 @@
  * Python's type annotation introspection.
  */
 
-import { z, type ZodType } from "zod";
+import { z, type ZodType, toJSONSchema } from "zod";
 import type {
   ToolInputSchema,
   ToolResult,
@@ -149,26 +149,23 @@ export class FunctionTool extends Tool {
  * Convert a Zod schema to JSON Schema for MCP protocol.
  */
 function zodToJsonSchema(schema: ZodType): ToolInputSchema {
-  // Use Zod's built-in JSON schema generation if available,
-  // otherwise build a basic schema
   try {
-    const jsonSchema = schema._toJsonSchema?.() ?? { type: "object" };
+    const jsonSchema = toJSONSchema(schema) as Record<string, unknown>;
     return {
       type: "object",
-      properties: jsonSchema.properties ?? {},
-      required: jsonSchema.required,
+      properties: (jsonSchema.properties ?? {}) as Record<string, JsonSchema>,
+      required: jsonSchema.required as string[] | undefined,
     };
   } catch {
     // Fallback: manual extraction for common Zod types
     if (schema instanceof z.ZodObject) {
-      const shape = schema.shape;
+      const shape = schema.shape as Record<string, ZodType>;
       const properties: Record<string, JsonSchema> = {};
       const required: string[] = [];
 
       for (const [key, value] of Object.entries(shape)) {
-        const zodField = value as ZodType;
-        properties[key] = zodFieldToJsonSchema(zodField);
-        if (!isOptional(zodField)) {
+        properties[key] = zodFieldToJsonSchema(value);
+        if (!isOptional(value)) {
           required.push(key);
         }
       }
@@ -188,17 +185,27 @@ function zodFieldToJsonSchema(field: ZodType): JsonSchema {
   if (field instanceof z.ZodNumber) return { type: "number" };
   if (field instanceof z.ZodBoolean) return { type: "boolean" };
   if (field instanceof z.ZodArray) {
-    return {
-      type: "array",
-      items: zodFieldToJsonSchema(field._zod.def.element),
-    };
+    const def = (field as unknown as { _zod: { def: { element: ZodType } } })._zod?.def;
+    if (def?.element) {
+      return {
+        type: "array",
+        items: zodFieldToJsonSchema(def.element),
+      };
+    }
+    return { type: "array" };
   }
   if (field instanceof z.ZodOptional) {
-    return zodFieldToJsonSchema(field._zod.def.innerType);
+    const def = (field as unknown as { _zod: { def: { innerType: ZodType } } })._zod?.def;
+    if (def?.innerType) {
+      return zodFieldToJsonSchema(def.innerType);
+    }
   }
   if (field instanceof z.ZodDefault) {
-    const inner = zodFieldToJsonSchema(field._zod.def.innerType);
-    return { ...inner, default: field._zod.def.defaultValue };
+    const def = (field as unknown as { _zod: { def: { innerType: ZodType; defaultValue: unknown } } })._zod?.def;
+    if (def?.innerType) {
+      const inner = zodFieldToJsonSchema(def.innerType);
+      return { ...inner, default: def.defaultValue };
+    }
   }
   return {};
 }
