@@ -26,7 +26,8 @@ export type { FastMCPOptions } from "./server/server";
 
 // Client
 export { Client } from "./client";
-export type { ClientOptions, ClientTransport } from "./client";
+export { HttpTransport, InMemoryTransport } from "./client";
+export type { ClientOptions, ClientTransport, HttpTransportOptions } from "./client";
 
 // Tools
 export { Tool, FunctionTool, createTool } from "./tools";
@@ -104,6 +105,24 @@ export {
   InMemoryAuthProvider,
 } from "./server/auth";
 export type { AuthProvider } from "./server/auth";
+export { JWTAuthProvider, StaticTokenProvider, createHS256Token } from "./server/auth/jwt";
+
+// Transforms
+export {
+  Transform,
+  TransformPipeline,
+  Namespace,
+  Visibility,
+  isEnabled,
+  VersionFilter,
+  ToolTransform,
+} from "./server/transforms";
+export type {
+  GetToolNext,
+  GetResourceNext,
+  GetResourceTemplateNext,
+  GetPromptNext,
+} from "./server/transforms";
 
 // Exceptions
 export {
