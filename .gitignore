@@ -78,3 +78,8 @@ plans/
 /server.py
 /client.py
 /test.json
+
+# Next.js / TypeScript port
+fastmcp-next/node_modules/
+fastmcp-next/.next/
+fastmcp-next/out/
