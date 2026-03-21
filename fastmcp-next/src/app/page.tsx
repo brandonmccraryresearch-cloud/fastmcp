@@ -125,16 +125,16 @@ export default function Home() {
           <StatusItem label="Prompt System" status="done" />
           <StatusItem label="Provider System" status="done" />
           <StatusItem label="Middleware Pipeline" status="done" />
-          <StatusItem label="Auth System" status="done" />
+          <StatusItem label="Auth System + JWT" status="done" />
           <StatusItem label="Context & State" status="done" />
-          <StatusItem label="Client SDK Core" status="done" />
+          <StatusItem label="Transform System" status="done" />
+          <StatusItem label="Client SDK + Transports" status="done" />
           <StatusItem label="Next.js API Handler" status="done" />
-          <StatusItem label="Server Transports (SSE/stdio)" status="pending" />
-          <StatusItem label="Transform System" status="pending" />
+          <StatusItem label="SSE Transport" status="pending" />
           <StatusItem label="OpenAPI Provider" status="pending" />
           <StatusItem label="Task System" status="pending" />
           <StatusItem label="CLI Commands" status="pending" />
-          <StatusItem label="Full Client Transport" status="pending" />
+          <StatusItem label="OAuth2 Providers" status="pending" />
         </div>
       </section>
 

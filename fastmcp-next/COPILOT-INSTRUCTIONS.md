@@ -6,11 +6,11 @@
 
 This document provides instructions for AI agents (GitHub Copilot, Claude, etc.) continuing the port of the **Python FastMCP framework** to **TypeScript/Next.js**. The original Python codebase is in the repository root (`src/fastmcp/`), and the TypeScript port lives in `fastmcp-next/`.
 
-## Current State (Session 1 Complete)
+## Current State (Session 2 Complete)
 
 ### What Has Been Ported
 
-The foundational architecture is in place with **73 passing tests** and a **successful Next.js build**:
+The foundational architecture is in place with **122 passing tests** and a **successful Next.js build**:
 
 | Module | Status | Location | Tests |
 |--------|--------|----------|-------|
@@ -24,9 +24,12 @@ The foundational architecture is in place with **73 passing tests** and a **succ
 | Provider System (Local + Aggregate) | ✅ Done | `src/lib/fastmcp/server/providers/index.ts` | via server tests |
 | Middleware Pipeline | ✅ Done | `src/lib/fastmcp/server/middleware/index.ts` | 8 tests |
 | Auth System | ✅ Done | `src/lib/fastmcp/server/auth/index.ts` | 11 tests |
+| JWT Auth Provider | ✅ Done | `src/lib/fastmcp/server/auth/jwt.ts` | 12 tests |
 | Context & State | ✅ Done | `src/lib/fastmcp/server/context/index.ts` | via server tests |
 | FastMCP Server | ✅ Done | `src/lib/fastmcp/server/server.ts` | 15 tests |
-| Client SDK (skeleton) | ✅ Done | `src/lib/fastmcp/client/client.ts` | — |
+| Transform System | ✅ Done | `src/lib/fastmcp/server/transforms/` | 24 tests |
+| Client SDK | ✅ Done | `src/lib/fastmcp/client/client.ts` | via transport tests |
+| Client Transports (HTTP + InMemory) | ✅ Done | `src/lib/fastmcp/client/transports/` | 13 tests |
 | Next.js API Handler | ✅ Done | `src/lib/fastmcp/server/nextjs-handler.ts` | — |
 | Example MCP Server | ✅ Done | `src/app/api/mcp/server.ts` | — |
 | Demo Landing Page | ✅ Done | `src/app/page.tsx` | — |
@@ -38,24 +41,20 @@ Listed in approximate priority order:
 
 #### High Priority
 
-1. **Transform System** — Port `server/transforms/` from Python
-   - Python source: `src/fastmcp/server/transforms/`
-   - Includes: Namespace, Visibility, VersionFilter, ToolTransform
-   - Two-phase architecture: list operations (pure) + get operations (middleware pattern)
-
-2. **Full Client Transports** — Port `client/transports/` from Python
-   - HTTP/SSE/Streamable HTTP transport implementations
-   - Python source: `src/fastmcp/client/transports/`
-   - Integrate with `@modelcontextprotocol/sdk` for protocol compliance
-
-3. **Server Transports (SSE/stdio)** — Port transport methods
-   - SSE endpoint for browser-compatible streaming
-   - Stdio transport for subprocess communication
+1. **SSE Transport** — Server-Sent Events for streaming
+   - Implement SSE endpoint for browser-compatible streaming
    - Python source: `src/fastmcp/server/low_level.py`
 
-4. **OpenAPI Provider** — Port `server/providers/openapi.py`
+2. **OpenAPI Provider** — Port `server/providers/openapi.py`
    - Auto-generates tools from OpenAPI/Swagger specs
    - Python source: `src/fastmcp/utilities/openapi/`
+
+3. **PromptsAsTools / ResourcesAsTools** — Synthetic tool generation transforms
+   - Expose prompts and resources as tools for tool-only clients
+   - Python source: `src/fastmcp/server/transforms/prompts_as_tools.py`, `resources_as_tools.py`
+
+4. **Search Transforms** — Tool discovery via search (regex, BM25)
+   - Python source: `src/fastmcp/server/transforms/search/`
 
 #### Medium Priority
 
@@ -69,18 +68,16 @@ Listed in approximate priority order:
 
 7. **FastMCPApp** — Composable applications with global tool registry
    - Python source: `src/fastmcp/server/app.py`
-   - Global tool registry pattern
 
 8. **CLI Commands** — Port `cli/` module
    - Python source: `src/fastmcp/cli/`
    - Consider using `commander` or `yargs` for TypeScript CLI
-   - Commands: run, install, auth, tasks, client, generate
 
 #### Lower Priority
 
-9. **Additional Auth Providers** — JWT, OAuth2 flows
-   - Python source: `src/fastmcp/server/auth/`
-   - 16 provider implementations in Python
+9. **Additional Auth Providers** — OAuth2 flows, social providers
+   - Python source: `src/fastmcp/server/auth/providers/`
+   - 16+ provider implementations in Python (GitHub, Google, Auth0, etc.)
 
 10. **Sampling Handlers** — LLM sampling support
     - Python source: `src/fastmcp/client/sampling/`
@@ -101,7 +98,7 @@ cd fastmcp-next
 # Install dependencies
 npm install
 
-# Run tests (73 tests currently passing)
+# Run tests (122 tests currently passing)
 npm test
 
 # Watch mode for tests
@@ -179,18 +176,35 @@ fastmcp-next/
 │       │   ├── context/index.ts      # Per-request Context
 │       │   ├── providers/index.ts    # Provider, LocalProvider, AggregateProvider
 │       │   ├── middleware/index.ts   # Middleware pipeline
-│       │   └── auth/index.ts         # Auth checks, InMemoryAuthProvider
+│       │   ├── auth/
+│       │   │   ├── index.ts          # Auth checks, InMemoryAuthProvider
+│       │   │   └── jwt.ts            # JWTAuthProvider, StaticTokenProvider
+│       │   └── transforms/
+│       │       ├── index.ts          # TransformPipeline, re-exports
+│       │       ├── base.ts           # Transform abstract base class
+│       │       ├── namespace.ts      # Namespace prefix transform
+│       │       ├── visibility.ts     # Visibility marking transform
+│       │       ├── version-filter.ts # Version range filter transform
+│       │       ├── tool-transform.ts # Tool schema modification transform
+│       │       └── utils.ts          # cloneComponent helper
 │       └── client/
 │           ├── index.ts              # Client barrel
-│           └── client.ts             # Client class (skeleton)
+│           ├── client.ts             # Client class
+│           └── transports/
+│               ├── index.ts          # Transport barrel
+│               ├── http.ts           # HTTP/JSON-RPC transport
+│               └── memory.ts         # In-memory transport (same-process)
 ├── __tests__/                         # Vitest test files
 │   ├── tools/tool.test.ts
 │   ├── resources/resource.test.ts
 │   ├── prompts/prompt.test.ts
+│   ├── client/transport.test.ts
 │   ├── server/
 │   │   ├── server.test.ts
 │   │   ├── middleware.test.ts
-│   │   └── auth.test.ts
+│   │   ├── auth.test.ts
+│   │   ├── auth-jwt.test.ts
+│   │   └── transforms/transforms.test.ts
 │   └── utilities/utilities.test.ts
 ├── vitest.config.ts                   # Test configuration
 ├── package.json                       # Dependencies & scripts

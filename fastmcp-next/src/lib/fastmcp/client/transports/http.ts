@@ -7,6 +7,18 @@
 
 import type { ClientTransport } from "../client";
 
+// ---------- JSON-RPC Error ----------
+
+export class JsonRpcError extends Error {
+  readonly code: number;
+
+  constructor(message: string, code: number) {
+    super(message);
+    this.name = "JsonRpcError";
+    this.code = code;
+  }
+}
+
 export interface HttpTransportOptions {
   /** Base URL of the MCP server endpoint */
   url: string;
@@ -97,9 +109,7 @@ export class HttpTransport implements ClientTransport {
       };
 
       if (data.error) {
-        const err = new Error(data.error.message);
-        (err as Error & { code: number }).code = data.error.code;
-        throw err;
+        throw new JsonRpcError(data.error.message, data.error.code);
       }
 
       return data.result;

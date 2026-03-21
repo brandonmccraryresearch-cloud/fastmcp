@@ -15,6 +15,21 @@ import type { Prompt } from "../../prompts";
 import type { FastMCPComponent } from "../../utilities/components";
 import { cloneComponent } from "./utils";
 
+// ---------- Helpers ----------
+
+/**
+ * Get the primary identifier for a component (URI, template URI, or name).
+ */
+function getComponentIdentifier(component: FastMCPComponent): string {
+  if ("uri" in component) {
+    return (component as unknown as { uri: string }).uri;
+  }
+  if ("uriTemplate" in component) {
+    return (component as unknown as { uriTemplate: string }).uriTemplate;
+  }
+  return component.name;
+}
+
 // ---------- Visibility Criteria ----------
 
 export interface VisibilityCriteria {
@@ -62,12 +77,7 @@ export class Visibility extends Transform {
     // Check names
     if (this.criteria.names && this.criteria.names.length > 0) {
       hasAnyCriteria = true;
-      const identifier =
-        "uri" in component
-          ? (component as unknown as { uri: string }).uri
-          : "uriTemplate" in component
-            ? (component as unknown as { uriTemplate: string }).uriTemplate
-            : component.name;
+      const identifier = getComponentIdentifier(component);
       if (this.criteria.names.includes(identifier)) {
         matchesAnyCriteria = true;
       }

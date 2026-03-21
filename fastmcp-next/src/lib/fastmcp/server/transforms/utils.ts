@@ -17,10 +17,10 @@ export function cloneComponent<T>(
   for (const [key, value] of Object.entries(overrides)) {
     clone[key] = value;
   }
-  // Deep-clone meta to avoid cross-mutation
+  // Deep-clone meta to avoid cross-mutation (meta only contains serializable data)
   const meta = (component as Record<string, unknown>).meta;
   if (meta && typeof meta === "object") {
-    clone.meta = JSON.parse(JSON.stringify(meta));
+    clone.meta = structuredClone(meta);
   }
   return clone as T;
 }
